@@ -94,7 +94,7 @@ EOF
 installEQMX () {
 
 curl -s https://assets.emqx.com/scripts/install-emqx-deb.sh | sudo bash
-sudo apt-get install emqx
+sudo apt-get -y install emqx
 sudo systemctl start emqx
 
 }
