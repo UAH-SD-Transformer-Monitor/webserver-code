@@ -3,7 +3,7 @@
 
 
 
-installNodeRed () {
+installNodeRed() {
 
 adduser nodered
 
@@ -78,7 +78,7 @@ server {
 EOF
 }
 
-installFail2Ban () {
+installFail2Ban() {
 
     sudo apt update && sudo apt upgrade -y
 
@@ -90,7 +90,7 @@ installFail2Ban () {
 
 }
 
-installNginx () {
+installNginx() {
 
     sudo apt install build-essential git
 
@@ -159,7 +159,7 @@ ssl_certificate_key /etc/acme/live/$DOMAIN/privkey.pem;
 EOF
 }
 
-installEQMX () {
+installEQMX() {
 
 curl -s https://assets.emqx.com/scripts/install-emqx-deb.sh | sudo bash
 sudo apt-get -y install emqx
@@ -267,7 +267,7 @@ cd ./acme.sh
 
 }
 
-obtainCerts(){
+obtainCerts() {
 /etc/acme/acme.sh --issue -d $DOMAIN -d $EQMX_DOMAIN -d $NODERED_DOMAIN -w /var/www/letsencrypt/;
 /etc/acme/acme.sh --install-cert -d $DOMAIN -d $EQMX_DOMAIN -d $NODERED_DOMAIN \
  --key-file /etc/acme/live/$DOMAIN/privkey.pem \
@@ -304,11 +304,11 @@ if [ -z ${NODERED_DOMAIN+x} ];
     exit 1;
   fi
 
-installNginx()
-installAcme()
-installFail2Ban()
-installEQMX()
-obtainCerts()
+installNginx
+installAcme
+installFail2Ban
+installEQMX
+obtainCerts
 rm /etc/nginx/sites-enabled/default;
 systemctl reload nginx
 
