@@ -21,6 +21,7 @@ server {
   server_name $NODERED_DOMAIN;
     listen 80;
 
+    include includes/letsencrypt-webroot;
     location = /robots.txt {
     		add_header  Content-Type  text/plain;
     		return 200 "User-agent: *\nDisallow: /\n";
