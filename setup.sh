@@ -30,6 +30,7 @@ server {
     return 301 https://$NODERED_DOMAIN\$request_uri;
 
 }
+
 server {
         listen 443 ssl;
         listen [::]:443 ssl;
@@ -256,7 +257,7 @@ EOF
 systemctl reload nginx.service
 
 git clone https://github.com/acmesh-official/acme.sh.git
-mkdir -p /etc/acme/{config,certs};
+mkdir -p /etc/acme/{config,certs,live};
 cd ./acme.sh
 ./acme.sh --install -m $ACME_EMAIL \
             --home /etc/acme \
@@ -295,6 +296,11 @@ if [ -z ${DOMAIN+x} ];
 if [ -z ${EQMX_DOMAIN+x} ]; 
   then
     echo "Set EQMX_DOMAIN by exporting this variable with a domain that points to this server";
+    exit 1;
+  fi
+if [ -z ${NODERED_DOMAIN+x} ]; 
+  then
+    echo "Set NODERED_DOMAIN by exporting this variable with a domain that points to this server";
     exit 1;
   fi
 
