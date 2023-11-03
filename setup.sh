@@ -304,11 +304,11 @@ if [ -z ${NODERED_DOMAIN+x} ];
     exit 1;
   fi
 
-installNginx();
-installAcme();
-installFail2Ban();
-installEQMX();
-obtainCerts();
+installNginx()
+installAcme()
+installFail2Ban()
+installEQMX()
+obtainCerts()
 rm /etc/nginx/sites-enabled/default;
 systemctl reload nginx
 
