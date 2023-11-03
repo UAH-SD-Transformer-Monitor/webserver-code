@@ -112,7 +112,7 @@ installNginx() {
 
 cat <<EOF > /etc/nginx/nginx.conf
 
-    user  nginx;
+    user  www-data;
     worker_processes  auto;
 
     error_log  /var/log/nginx/error.log notice;
@@ -233,7 +233,7 @@ systemctl reload nginx
 installAcme() {
 
 mkdir -p /var/www/letsencrypt/;
-chown -R nginx:nginx /var/www/letsencrypt/;
+chown -R www-data:www-data /var/www/letsencrypt/;
 
 cat <<EOF > /etc/nginx/includes/letsencrypt-webroot
 
