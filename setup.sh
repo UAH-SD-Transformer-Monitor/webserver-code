@@ -161,9 +161,62 @@ EOF
 
 installEQMX() {
 
-curl -s https://assets.emqx.com/scripts/install-emqx-deb.sh | sudo bash
-sudo apt-get -y install emqx
-sudo systemctl start emqx
+# Add Docker's official GPG key:
+sudo apt-get update
+sudo apt-get -y install ca-certificates curl gnupg
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
+
+
+# Add the repository to Apt sources:
+echo \
+  "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+
+sudo apt-get -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+
+docker network create --subnet=10.5.0.0/16 transformerMon
+
+mkdir -p /docker/eqmx
+
+cat << EOF > /docker/eqmx/docker-compose.yml
+version: '3'
+
+services:
+  emqx1:
+    image: emqx:5.3.0
+    container_name: emqx1
+    environment:
+    - "EMQX_NODE_NAME=emqx@node1.emqx.io"
+    - "EMQX_CLUSTER__DISCOVERY_STRATEGY=static"
+    - "EMQX_CLUSTER__STATIC__SEEDS=[emqx@node1.emqx.io]"
+    healthcheck:
+      test: ["CMD", "/opt/emqx/bin/emqx", "ctl", "status"]
+      interval: 5s
+      timeout: 25s
+      retries: 5
+    networks:
+      emqx-bridge:
+        aliases:
+        - node1.emqx.io
+    ports:
+      - 1883:1883
+      - 8083:8083
+      - 8084:8084
+      - 8883:8883
+      - 18083:18083 
+    # volumes:
+    #   - $PWD/emqx1_data:/opt/emqx/data
+
+networks:
+  emqx-bridge:
+    driver: bridge
+EOF
+
 
 cat <<EOF > /etc/nginx/sites-availiable/eqmx.conf
 #proxy for eqmx @ port :18083
