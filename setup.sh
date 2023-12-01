@@ -159,7 +159,7 @@ ssl_certificate_key /etc/acme/live/$DOMAIN/privkey.pem;
 EOF
 }
 
-installEQMX() {
+installEMQX() {
 
 # Add Docker's official GPG key:
 sudo apt-get update
@@ -181,9 +181,9 @@ sudo apt-get -y install docker-ce docker-ce-cli containerd.io docker-buildx-plug
 
 docker network create --subnet=10.5.0.0/16 transformerMon
 
-mkdir -p /docker/eqmx
+mkdir -p /docker/emqx
 
-cat << EOF > /docker/eqmx/docker-compose.yml
+cat << EOF > /docker/emqx/docker-compose.yml
 version: '3'
 
 services:
@@ -220,25 +220,25 @@ networks:
 EOF
 
 
-cat <<EOF > /etc/nginx/sites-availiable/eqmx.conf
-#proxy for eqmx @ port :18083
+cat <<EOF > /etc/nginx/sites-availiable/emqx.conf
+#proxy for emqx @ port :18083
 server {
         listen 80;
         listen [::]:80;
         include includes/letsencrypt-webroot;
-        server_name $EQMX_DOMAIN;
+        server_name $EMQX_DOMAIN;
 
         location = /robots.txt {
                 add_header  Content-Type  text/plain;
                 return 200 "User-agent: *\nDisallow: /\n";
         }
-        return 301 https://$EQMX_DOMAIN\$request_uri;
+        return 301 https://$EMQX_DOMAIN\$request_uri;
 }
 
 server {
         listen 443 ssl;
         listen [::]:443 ssl;
-        server_name $EQMX_DOMAIN;
+        server_name $EMQX_DOMAIN;
         include includes/certs.conf;
         location / {
                 proxy_pass http://127.0.0.1:18083;
@@ -281,7 +281,7 @@ server {
 }
 EOF
 
-ln -s /etc/nginx/sites-availiable/eqmx.conf /etc/nginx/sites-enabled/eqmx.conf;
+ln -s /etc/nginx/sites-availiable/emqx.conf /etc/nginx/sites-enabled/emqx.conf;
 systemctl reload nginx
 }
 
@@ -323,8 +323,8 @@ cd ./acme.sh
 }
 
 obtainCerts() {
-/etc/acme/acme.sh --issue -d $DOMAIN -d $EQMX_DOMAIN -d $NODERED_DOMAIN -w /var/www/letsencrypt/;
-/etc/acme/acme.sh --install-cert -d $DOMAIN -d $EQMX_DOMAIN -d $NODERED_DOMAIN \
+/etc/acme/acme.sh --issue -d $DOMAIN -d $EMQX_DOMAIN -d $NODERED_DOMAIN -w /var/www/letsencrypt/;
+/etc/acme/acme.sh --install-cert -d $DOMAIN -d $EMQX_DOMAIN -d $NODERED_DOMAIN \
  --key-file /etc/acme/live/$DOMAIN/privkey.pem \
  --fullchain-file /etc/acme/live/$DOMAIN/fullchain.pem \
  --reloadcmd 'systemctl reload nginx';
@@ -348,9 +348,9 @@ if [ -z ${DOMAIN+x} ];
     echo "Set DOMAIN by exporting this variable with a domain that points to this server";
     exit 1;
   fi
-if [ -z ${EQMX_DOMAIN+x} ]; 
+if [ -z ${EMQX_DOMAIN+x} ]; 
   then
-    echo "Set EQMX_DOMAIN by exporting this variable with a domain that points to this server";
+    echo "Set EMQX_DOMAIN by exporting this variable with a domain that points to this server";
     exit 1;
   fi
 if [ -z ${NODERED_DOMAIN+x} ]; 
@@ -362,7 +362,7 @@ if [ -z ${NODERED_DOMAIN+x} ];
 installNginx
 installAcme
 installFail2Ban
-installEQMX
+installEMQX
 obtainCerts
 rm /etc/nginx/sites-enabled/default;
 systemctl reload nginx
