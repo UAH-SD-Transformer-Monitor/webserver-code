@@ -168,8 +168,8 @@ password_file /etc/mosquitto/passwd
 listener 1883 localhost
 
 listener 8883
-# certfile /etc/acme/live/$DOMAIN/cert.pem
-cafile /etc/acme/live/$DOMAIN/fullchain.pem
+cafile /etc/acme/live/$DOMAIN/chain.pem
+certfile /etc/acme/live/$DOMAIN/cert.pem
 keyfile /etc/acme/live/$DOMAIN/privkey.pem
 
 EOF
@@ -224,6 +224,8 @@ obtainCerts() {
 /etc/acme/acme.sh --install-cert -d $DOMAIN -d $NODERED_DOMAIN \
  --key-file /etc/acme/live/$DOMAIN/privkey.pem \
  --fullchain-file /etc/acme/live/$DOMAIN/fullchain.pem \
+ --ca-file /etc/acme/live/$DOMAIN/chain.pem \
+ --cert-file /etc/acme/live/$DOMAIN/cert.pem \
  --reloadcmd 'systemctl reload nginx';
 }
 
