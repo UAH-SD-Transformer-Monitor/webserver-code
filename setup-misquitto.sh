@@ -168,12 +168,16 @@ password_file /etc/mosquitto/passwd
 listener 1883 localhost
 
 listener 8883
-certfile /etc/letsencrypt/live/$DOMAIN/cert.pem
-cafile /etc/letsencrypt/live/$DOMAIN/fullchain.pem
-keyfile /etc/letsencrypt/live/$DOMAIN/privkey.pem
+# certfile /etc/acme/live/$DOMAIN/cert.pem
+cafile /etc/acme/live/$DOMAIN/fullchain.pem
+keyfile /etc/acme/live/$DOMAIN/privkey.pem
 
 EOF
 
+# change ownership of password file
+chown mosquitto:mosquitto /etc/mosquitto/passwd
+# give mosquitto user access to cert directory 
+setfacl -R -m u:mosquitto:r /etc/acme/live/$DOMAIN
 systemctl restart mosquitto
 
 }
@@ -250,9 +254,9 @@ if [ -z ${NODERED_DOMAIN+x} ];
 
 installNginx
 installAcme
+obtainCerts
 installFail2Ban
 installMosquitto
-obtainCerts
 rm /etc/nginx/sites-enabled/default;
 systemctl reload nginx
 
