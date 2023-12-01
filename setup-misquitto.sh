@@ -123,10 +123,6 @@ cat <<EOF > /etc/nginx/nginx.conf
         worker_connections  1024;
     }
 
-    stream {
-        include /etc/nginx/streams/*;
-    }
-
     http {
         include       /etc/nginx/mime.types;
         default_type  application/octet-stream;
@@ -159,130 +155,27 @@ ssl_certificate_key /etc/acme/live/$DOMAIN/privkey.pem;
 EOF
 }
 
-installEQMX() {
+installMosquitto() {
 
-# Add Docker's official GPG key:
-sudo apt-get update
-sudo apt-get -y install ca-certificates curl gnupg
-sudo install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-sudo chmod a+r /etc/apt/keyrings/docker.gpg
+apt-get install mosquitto mosquitto-clients
 
+mosquitto_passwd -c /etc/mosquitto/passwd xformermon
 
-# Add the repository to Apt sources:
-echo \
-  "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-  "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
-  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-sudo apt-get update
+cat <<EOF > /etc/mosquitto/conf.d/default.conf
+allow_anonymous false
+password_file /etc/mosquitto/passwd
 
-sudo apt-get -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+listener 1883 localhost
 
+listener 8883
+certfile /etc/letsencrypt/live/$DOMAIN/cert.pem
+cafile /etc/letsencrypt/live/$DOMAIN/fullchain.pem
+keyfile /etc/letsencrypt/live/$DOMAIN/privkey.pem
 
-docker network create --subnet=10.5.0.0/16 transformerMon
-
-mkdir -p /docker/eqmx
-
-cat << EOF > /docker/eqmx/docker-compose.yml
-version: '3'
-
-services:
-  emqx1:
-    image: emqx:5.3.0
-    container_name: emqx1
-    environment:
-    - "EMQX_NODE_NAME=emqx@node1.emqx.io"
-    - "EMQX_CLUSTER__DISCOVERY_STRATEGY=static"
-    - "EMQX_CLUSTER__STATIC__SEEDS=[emqx@node1.emqx.io]"
-    healthcheck:
-      test: ["CMD", "/opt/emqx/bin/emqx", "ctl", "status"]
-      interval: 5s
-      timeout: 25s
-      retries: 5
-    networks:
-      emqx-bridge:
-        aliases:
-        - node1.emqx.io
-    ports:
-      - 1883:1883
-      - 8083:8083
-      - 8084:8084
-      - 8883:8883
-      - 18083:18083 
-    volumes:
-      # - /opt/emqx/data:/opt/emqx/data
-      # - /etc/acme/live/:/etc/emqx/etc
-      # - /etc/emqx:/etc/emqx
-
-networks:
-  emqx-bridge:
-    driver: bridge
 EOF
 
+systemctl restart mosquitto
 
-cat <<EOF > /etc/nginx/sites-availiable/eqmx.conf
-#proxy for eqmx @ port :18083
-server {
-        listen 80;
-        listen [::]:80;
-        include includes/letsencrypt-webroot;
-        server_name $EQMX_DOMAIN;
-
-        location = /robots.txt {
-                add_header  Content-Type  text/plain;
-                return 200 "User-agent: *\nDisallow: /\n";
-        }
-        return 301 https://$EQMX_DOMAIN\$request_uri;
-}
-
-server {
-        listen 443 ssl;
-        listen [::]:443 ssl;
-        server_name $EQMX_DOMAIN;
-        include includes/certs.conf;
-        location / {
-                proxy_pass http://127.0.0.1:18083;
-
-                #Defines the HTTP protocol version for proxying
-                #by default it it set to 1.0.
-                #For Websockets and keepalive connections you need to use the version 1.1
-                proxy_http_version  1.1;
-
-                #Sets conditions under which the response will not be taken from a cache.
-                proxy_cache_bypass  \$http_upgrade;
-
-                #These header fields are required if your application is using Websockets
-                proxy_set_header Upgrade \$http_upgrade;
-
-                #These header fields are required if your application is using Websockets
-                proxy_set_header Connection "upgrade";
-
-                #The \$host variable in the following order of precedence contains:
-                #hostname from the request line, or hostname from the Host request header field
-                #or the server name matching a request.
-                proxy_set_header Host \$host;
-
-                #Forwards the real visitor remote IP address to the proxied server
-                proxy_set_header X-Real-IP \$remote_addr;
-
-                #A list containing the IP addresses of every server the client has been proxied through
-                proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-
-                #When used inside an HTTPS server block, each HTTP response from the proxied server is rewritten to HTTPS.
-                proxy_set_header X-Forwarded-Proto \$scheme;
-
-                #Defines the original host requested by the client.
-                proxy_set_header X-Forwarded-Host \$host;
-
-                #Defines the original port requested by the client.
-                proxy_set_header X-Forwarded-Port \$server_port;
-
-        }
-}
-EOF
-
-ln -s /etc/nginx/sites-availiable/eqmx.conf /etc/nginx/sites-enabled/eqmx.conf;
-systemctl reload nginx
 }
 
 installAcme() {
@@ -323,8 +216,8 @@ cd ./acme.sh
 }
 
 obtainCerts() {
-/etc/acme/acme.sh --issue -d $DOMAIN -d $EQMX_DOMAIN -d $NODERED_DOMAIN -w /var/www/letsencrypt/;
-/etc/acme/acme.sh --install-cert -d $DOMAIN -d $EQMX_DOMAIN -d $NODERED_DOMAIN \
+/etc/acme/acme.sh --issue -d $DOMAIN -d $NODERED_DOMAIN -w /var/www/letsencrypt/;
+/etc/acme/acme.sh --install-cert -d $DOMAIN -d $NODERED_DOMAIN \
  --key-file /etc/acme/live/$DOMAIN/privkey.pem \
  --fullchain-file /etc/acme/live/$DOMAIN/fullchain.pem \
  --reloadcmd 'systemctl reload nginx';
@@ -348,11 +241,7 @@ if [ -z ${DOMAIN+x} ];
     echo "Set DOMAIN by exporting this variable with a domain that points to this server";
     exit 1;
   fi
-if [ -z ${EQMX_DOMAIN+x} ]; 
-  then
-    echo "Set EQMX_DOMAIN by exporting this variable with a domain that points to this server";
-    exit 1;
-  fi
+
 if [ -z ${NODERED_DOMAIN+x} ]; 
   then
     echo "Set NODERED_DOMAIN by exporting this variable with a domain that points to this server";
@@ -362,7 +251,7 @@ if [ -z ${NODERED_DOMAIN+x} ];
 installNginx
 installAcme
 installFail2Ban
-installEQMX
+installMosquitto
 obtainCerts
 rm /etc/nginx/sites-enabled/default;
 systemctl reload nginx
