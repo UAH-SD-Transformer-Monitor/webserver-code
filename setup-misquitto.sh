@@ -168,18 +168,23 @@ password_file /etc/mosquitto/passwd
 listener 1883 localhost
 
 listener 8883
-cafile /etc/acme/live/$DOMAIN/chain.pem
-certfile /etc/acme/live/$DOMAIN/cert.pem
-keyfile /etc/acme/live/$DOMAIN/privkey.pem
+cafile /etc/mosquitto/certs/chain.pem
+certfile /etc/mosquitto/certs/fullchain.pem
+keyfile /etc/mosquitto/certs/privkey.pem
 
 EOF
 
 # change ownership of password file
 chown mosquitto:mosquitto /etc/mosquitto/passwd
-# give mosquitto user access to cert directory 
-setfacl -R -m u:mosquitto:r /etc/acme/live/$DOMAIN
-systemctl restart mosquitto
 
+/etc/acme/acme.sh --install-cert -d $DOMAIN \
+ --key-file /etc/mosquitto/certs/privkey.pem \
+ --fullchain-file /etc/mosquitto/certs/fullchain.pem \
+ --ca-file /etc/mosquitto/certs/chain.pem \
+ --cert-file /etc/mosquitto/certs/cert.pem \
+ --reloadcmd 'systemctl restart mosquitto; chown -R mosquitto:mosquitto /etc/mosquitto/certs';
+
+systemctl restart mosquitto
 }
 
 installAcme() {
