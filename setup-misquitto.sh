@@ -12,7 +12,7 @@ usermod -a -G sudo nodered
 su nodered -C "bash <(curl -sL https://raw.githubusercontent.com/node-red/linux-installers/master/deb/update-nodejs-and-nodered) --node20 --nodered-user=nodered --confirm-install --skip-pi"
 node-red admin init
 
-cat <<EOF > /etc/nginx/sites-availiable/node-red.conf;
+cat <<EOF > /etc/nginx/sites-available/node-red.conf;
 upstream nodered {
   server 127.0.0.1:1880
 }
@@ -147,7 +147,7 @@ EOF
 
     mkdir /etc/nginx/streams;
     mkdir /etc/nginx/includes;
-    mkdir /etc/nginx/sites-{availiable,enabled};
+    mkdir /etc/nginx/sites-{available,enabled};
 
 cat <<EOF > /etc/nginx/includes/certs.conf;
 ssl_certificate /etc/acme/live/$DOMAIN/fullchain.pem;
